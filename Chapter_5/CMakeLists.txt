@@ -6,6 +6,8 @@ project(Chapter_5 LANGUAGES C CXX CUDA)
 
 # find cuda.
 find_package(CUDAToolkit REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
 
 # set specific compilers.
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
@@ -33,7 +35,10 @@ include_directories(../common)
 link_directories(../lib)
 
 # source to target.
-# add_executable(simpleAdd simpleAdd.cu)
-add_executable(test test.cu)
+add_executable(simpleAdd simpleAdd.cu)
+add_executable(simpleAdd2 simpleAdd2.cu)
+add_executable(ripple ripple.cu)
+add_executable(dot_product dot_product.cu)
 
-target_include_directories(test PUBLIC "include/")
+target_include_directories(ripple PUBLIC ./include)
+target_link_libraries(ripple PUBLIC OpenGL::GL GLUT::GLUT)
