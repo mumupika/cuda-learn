@@ -1,0 +1,9 @@
+CompileFlags:
+    Remove:
+        - "-forward-unknown-to-host-compiler"
+        - "--generate-code=arch=compute_89,code=[compute_89,sm_89]"
+        - "--extended-lambda"
+        - "-G"
+    Add:
+        - "--cuda-gpu-arch=sm_89"
+    Compiler: clang++
