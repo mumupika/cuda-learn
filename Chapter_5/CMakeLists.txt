@@ -8,6 +8,7 @@ project(Chapter_5 LANGUAGES C CXX CUDA)
 find_package(CUDAToolkit REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
+find_package(OpenCV REQUIRED)
 
 # set specific compilers.
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
@@ -31,7 +32,7 @@ else()
 endif()
 
 # include directories and libraries.
-include_directories(../common)
+include_directories(../common ./include)
 link_directories(../lib)
 
 # source to target.
@@ -39,6 +40,10 @@ add_executable(simpleAdd simpleAdd.cu)
 add_executable(simpleAdd2 simpleAdd2.cu)
 add_executable(ripple ripple.cu)
 add_executable(dot_product dot_product.cu)
+add_executable(share_bitmap share_bitmap.cu)
 
 target_include_directories(ripple PUBLIC ./include)
 target_link_libraries(ripple PUBLIC OpenGL::GL GLUT::GLUT)
+
+target_include_directories(share_bitmap PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(share_bitmap PUBLIC OpenGL ${OpenCV_LIBS})

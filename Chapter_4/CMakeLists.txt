@@ -38,13 +38,9 @@ link_directories(../lib)
 add_executable(simpleVecAdd simpleVecAdd.cpp)
 add_executable(cudaSimpleVecAdd simpleVecAdd.cu)
 add_executable(julia_set julia_set.cu)
-add_executable(test_opencv test_opencv.cpp)
 
 # link target to OPENGL lib.
 set_target_properties(julia_set PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_compile_options(julia_set PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
 target_include_directories(julia_set SYSTEM PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(julia_set PUBLIC OpenGL ${OpenCV_LIBS})
-
-target_include_directories(test_opencv SYSTEM PUBLIC ${OpenCV_INCLUDE_DIRS})
-target_link_directories(test_opencv PUBLIC ${OpenCV_LIBS})

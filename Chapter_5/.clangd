@@ -7,6 +7,6 @@ CompileFlags:
     Add:
         - "-std=c++17"
         - "--cuda-gpu-arch=sm_89"
-        - "-I/usr/include/opencv4"
-        - "-I/usr/local/cuda/include"
+        - "-I/usr/local/include/opencv4/"
+        - "-I/usr/local/cuda/include/"
     Compiler: clang++
