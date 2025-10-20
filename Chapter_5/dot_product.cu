@@ -15,7 +15,7 @@ __global__ void dot (float* a, float* b, float* c) {
 
     float temp = 0;
     while (tid < N) {
-        temp = a[tid] * b[tid];
+        temp += a[tid] * b[tid];
         tid += blockDim.x * gridDim.x;
     }
 
