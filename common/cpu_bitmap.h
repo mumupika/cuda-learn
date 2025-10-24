@@ -18,6 +18,7 @@
 #define __CPU_BITMAP_H__
 
 #include "gl_helper.h"
+#include <cstring>
 
 struct CPUBitmap {
     unsigned char    *pixels;
@@ -46,7 +47,8 @@ struct CPUBitmap {
         // a bug in the Windows GLUT implementation prevents us from
         // passing zero arguments to glutInit()
         int c=1;
-        char* dummy = "";
+        char* dummy = new char[1];
+        memset(dummy, 0, sizeof(char));
         glutInit( &c, &dummy );
         glutInitDisplayMode( GLUT_SINGLE | GLUT_RGBA );
         glutInitWindowSize( x, y );

@@ -19,6 +19,7 @@
 
 #include "gl_helper.h"
 
+#include <cstring>
 #include <iostream>
 
 
@@ -58,7 +59,8 @@ struct CPUAnimBitmap {
         // a bug in the Windows GLUT implementation prevents us from
         // passing zero arguments to glutInit()
         int c=1;
-        char* dummy = "";
+        char* dummy = new char[1];
+        memset(dummy, 0, sizeof(char));
         glutInit( &c, &dummy );
         glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGBA );
         glutInitWindowSize( width, height );

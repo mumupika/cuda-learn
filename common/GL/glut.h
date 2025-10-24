@@ -148,14 +148,16 @@ extern _CRTIMP void __cdecl exit(int);
 #else
 /* non-Win32 case. */
 /* Define APIENTRY and CALLBACK to nothing if we aren't on Win32. */
+# ifndef APIENTRY
 # define APIENTRY
+# endif
 # define GLUT_APIENTRY_DEFINED
 # define CALLBACK
 /* Define GLUTAPI and GLUTCALLBACK as below if we aren't on Win32. */
 # define GLUTAPI extern
 # define GLUTCALLBACK
 /* Prototype exit for the non-Win32 case (see above). */
-extern void exit(int);
+extern void exit(int) noexcept;  
 #endif
 
 /**
