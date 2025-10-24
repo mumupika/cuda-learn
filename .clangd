@@ -1,0 +1,46 @@
+CompileFlags:
+    Remove:
+        - "-forward-unknown-to-host-compiler"
+        - "-gencode=arch=compute_89,code=sm_89"
+        - "-gencode=arch=compute_89,code=compute_89"
+        - "--extended-lambda"
+        - "-G"
+        - "-ccbin"
+        - "--expt-extended-lambda"
+        - "-Xptxas"
+        - "-maxrregcount=96"
+        - "-Xfatbin"
+        - "-compress-all"
+        - "--compiler-options"
+        - "-fPIC -fvisibility=hidden"
+        - "--generate-code=arch=compute_89,code=[compute_89,sm_89]"
+        - "-rdc=true"
+    Add:
+        - "-std=c++17"
+        - "--cuda-gpu-arch=sm_89"
+        - "-I/usr/local/cuda/include"
+        - "-ferror-limit=1000"
+
+---
+
+If:
+    PathMatch: .*\.h
+CompileFlags:
+    Add:
+        - "-xc++"
+
+---
+
+If:
+    PathMatch: .*\.cuh
+CompileFlags:
+    Add:
+        - "-xcuda"
+
+---
+
+If:
+    PathMatch: .*\.cu
+CompileFlags:
+    Add:
+        - "-xcuda"
