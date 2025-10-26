@@ -114,3 +114,8 @@ NCCL_DEBUG=INFO NCCL_NET_PLUGIN=none NCCL_IB_DISABLE=1 ./node_server --port 8066
 NCCL_DEBUG=INFO  NCCL_NET_PLUGIN=none NCCL_IB_DISABLE=1 ./node_client --hostname 10.10.1.1 --port 8066  --nranks 8
 ```
 
+### MPI Related:
+
+```shell
+mpirun --host 192.168.2.110:2,192.168.2.112:2 -x CUDA_VISIBLE_DEVICES=0,1 ./build/nccl/multiple_device_with_mpi
+```
