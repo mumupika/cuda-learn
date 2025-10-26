@@ -40,7 +40,8 @@ void non_blocking_all_to_all (int myRank, int nRanks, int localRank) {
     }
     MPICHECK (MPI_Bcast ((void*)&id, sizeof (ncclUniqueId), MPI_BYTE, 0, MPI_COMM_WORLD));
 
-    int nDev = 2; // 1 Process -> 2 GPU
+    int nDev;
+    cudaGetDeviceCount(&nDev); // 1 Process -> 2 GPU
 
     float** sendbuff = (float**)malloc (nDev * sizeof (float*));
     float** recvbuff = (float**)malloc (nDev * sizeof (float*));
