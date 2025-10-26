@@ -18,6 +18,9 @@ int main (int argc, char* argv[]) {
     MPICHECK (MPI_Comm_rank (MPI_COMM_WORLD, &myRank));
     MPICHECK (MPI_Comm_size (MPI_COMM_WORLD, &nRanks));
 
+    printf ("MPI Initialized: myRank: %d, nRanks: %d, localRank: %d\n", myRank,
+            nRanks, localRank);
+
 
     // calculating localRank based on hostname which is used in selecting a GPU
     uint64_t* hostHashs = (uint64_t*)malloc (sizeof (uint64_t) * nRanks);

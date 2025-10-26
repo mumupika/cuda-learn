@@ -9,7 +9,7 @@
 __global__ void fill_data (int dev_rank, int size, float* buff) {
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
     if (tid < size) {
-        buff[tid] = tid * dev_rank;
+        buff[tid] = tid + dev_rank;
     }
     __syncthreads ();
 }
@@ -36,8 +36,8 @@ void non_blocking_all_reduce (int myRank, int nRanks, int localRank) {
         // fill in the data.
         int threadsPerBlock = 1024;
         int blockPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
-        CUDACHECK(cudaStreamCreate(&s[i]));
-        fill_data<<<blockPerGrid, threadsPerBlock, 0, s[i]>>> (localRank * nDev + i,
+        CUDACHECK (cudaStreamCreate (&s[i]));
+        fill_data<<<blockPerGrid, threadsPerBlock, 0, s[i]>>> (myRank * nDev + i,
                                                                size, sendbuff[i]);
         CUDACHECK (cudaMemset (recvbuff[i], 0, sizeof (float) * size));
     }
@@ -48,89 +48,100 @@ void non_blocking_all_reduce (int myRank, int nRanks, int localRank) {
     }
 
     // Initializing NCCL ranks. Group initialize the comms.
-    ncclComm_t* comms = (ncclComm_t *) malloc(sizeof(ncclComm_t) * nDev);
-    ncclResult_t* state = (ncclResult_t *) malloc(sizeof(ncclResult_t) * nDev);
-    ncclConfig_t* config = (ncclConfig_t *) malloc(sizeof(ncclConfig_t) * nDev);
+    ncclComm_t* comms = (ncclComm_t*)malloc (sizeof (ncclComm_t) * nDev);
+    ncclResult_t* state = (ncclResult_t*)malloc (sizeof (ncclResult_t) * nDev);
+    ncclConfig_t* config = (ncclConfig_t*)malloc (sizeof (ncclConfig_t) * nDev);
     ncclResult_t ret = ncclInProgress;
-    for(int i = 0; i < nDev; i++) {
+    for (int i = 0; i < nDev; i++) {
         config[i] = NCCL_CONFIG_INITIALIZER;
         config[i].blocking = 0;
     }
 
-    ncclGroupStart();
-    for(int i = 0; i < nDev; i++) {
+    ncclGroupStart ();
+    for (int i = 0; i < nDev; i++) {
         CUDACHECK (cudaSetDevice (localRank * nDev + i));
-        ncclCommInitRankConfig(&comms[i], nRanks * nDev, id, myRank * nDev + i, &config[i]);
+        ncclCommInitRankConfig (&comms[i], nRanks * nDev, id, myRank * nDev + i,
+                                &config[i]);
     }
-    ret = ncclGroupEnd();
-    if(ret == ncclInProgress) {
-        for(int i = 0; i < nDev; i++) {
+    ret = ncclGroupEnd ();
+    if (ret == ncclInProgress) {
+        for (int i = 0; i < nDev; i++) {
             // Wait until one complete. Then another.
             do {
-                NCCLCHECK(ncclCommGetAsyncError(comms[i], &state[i]));
-            } while(state[i] == ncclInProgress);
-            NCCLCHECK(state[i]);
+                NCCLCHECK (ncclCommGetAsyncError (comms[i], &state[i]));
+            } while (state[i] == ncclInProgress);
+            NCCLCHECK (state[i]);
         }
     } else if (ret == ncclSuccess) {
-        printf("NCCL kernel issue succeeded\n");
+        printf ("NCCL kernel issue succeeded\n");
     } else {
         // Error occurred.
-        NCCLCHECK(ret);
+        NCCLCHECK (ret);
     }
 
     // NONBLOCKING allReduce.
-    ncclGroupStart();
+    ncclGroupStart ();
     for (int i = 0; i < nDev; i++) {
-        ncclAllReduce(reinterpret_cast<const char *>(sendbuff[i]), static_cast<void *>(recvbuff[i]), size, ncclFloat, ncclSum, comms[i], s[i]);
+        ncclAllReduce (reinterpret_cast<const char*> (sendbuff[i]),
+                       static_cast<void*> (recvbuff[i]), size, ncclFloat,
+                       ncclSum, comms[i], s[i]);
     }
-    ret = ncclGroupEnd();
-    if(ret == ncclInProgress) {
-        for(int i = 0; i < nDev; i++) {
+    ret = ncclGroupEnd ();
+    if (ret == ncclInProgress) {
+        for (int i = 0; i < nDev; i++) {
             // Wait until one complete. Then another.
             do {
-                NCCLCHECK(ncclCommGetAsyncError(comms[i], &state[i]));
-            } while(state[i] == ncclInProgress);
-            NCCLCHECK(state[i]);
+                NCCLCHECK (ncclCommGetAsyncError (comms[i], &state[i]));
+            } while (state[i] == ncclInProgress);
+            NCCLCHECK (state[i]);
         }
     } else if (ret == ncclSuccess) {
-        printf("NCCL kernel issue succeeded\n");
+        printf ("NCCL kernel issue succeeded\n");
     } else {
         // Error occurred.
-        NCCLCHECK(ret);
+        NCCLCHECK (ret);
     }
 
     for (int i = 0; i < nDev; i++) {
-        cudaStreamSynchronize(s[i]);
+        cudaStreamSynchronize (s[i]);
     }
 
     // Get the data of the final result.
-    float **hostData = (float **) malloc(nDev * sizeof(float *));
-    for(int i = 0; i < nDev; i++) {
-        hostData[i] = (float *) malloc(size * sizeof(float));
+    float** hostData = (float**)malloc (nDev * sizeof (float*));
+    for (int i = 0; i < nDev; i++) {
+        hostData[i] = (float*)malloc (size * sizeof (float));
     }
-    for(int i = 0; i < nDev; i++) {
-        cudaMemcpy(hostData[i], recvbuff[i], size * sizeof(float), cudaMemcpyDeviceToHost);
+    for (int i = 0; i < nDev; i++) {
+        cudaMemcpy (hostData[i], recvbuff[i], size * sizeof (float), cudaMemcpyDeviceToHost);
     }
 
-    for(int i = 0; i < nDev; i++) {
-        printf("[MPI Rank %d] Success: ", myRank);
-        for(int j = 0; j < 20; j++) {
-            printf("%f ", hostData[i][j]);
+    for (int i = 0; i < nDev; i++) {
+        printf ("[MPI Rank %d] Success: ", myRank * nDev + i);
+        for (int j = 0; j < 20; j++) {
+            printf ("%f ", hostData[i][j]);
         }
-        printf("\n");
+        printf ("\n");
     }
 
     // Free all resources.
-    for(int i = 0; i < nDev; i++) {
-        ncclCommDestroy(comms[i]);
-        CUDACHECK(cudaFree(sendbuff[i]));
-        CUDACHECK(cudaFree(recvbuff[i]));
-        free(hostData[i]);
+    for (int i = 0; i < nDev; i++) {
+        ncclCommDestroy (comms[i]);
+        CUDACHECK (cudaFree (sendbuff[i]));
+        CUDACHECK (cudaFree (recvbuff[i]));
+        free (hostData[i]);
     }
-    free(sendbuff);
-    free(recvbuff);
-    free(hostData);
+    free (sendbuff);
+    free (recvbuff);
+    free (hostData);
 
+    // finalizing NCCL
+    for (int i = 0; i < nDev; i++) {
+        ncclCommDestroy (comms[i]);
+    }
+
+    // finalizing MPI
+    MPICHECK (MPI_Finalize ());
+    return;
 }
 
 int main (int argc, char* argv[]) {
@@ -140,6 +151,9 @@ int main (int argc, char* argv[]) {
     MPICHECK (MPI_Init (&argc, &argv));
     MPICHECK (MPI_Comm_rank (MPI_COMM_WORLD, &myRank));
     MPICHECK (MPI_Comm_size (MPI_COMM_WORLD, &nRanks));
+
+    printf ("MPI Initialized: myRank: %d, nRanks: %d, localRank: %d\n", myRank,
+            nRanks, localRank);
 
     // localRank calculation based on hostname.
     uint64_t* hostHashs = (uint64_t*)malloc (sizeof (uint64_t) * nRanks);
