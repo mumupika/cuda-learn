@@ -9,7 +9,7 @@
 __global__ void fill_data (int dev_rank, int size, float* buff) {
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
     if (tid < size) {
-        buff[tid] = tid * size;
+        buff[tid] = tid * dev_rank;
     }
     __syncthreads ();
 }
@@ -59,7 +59,8 @@ void non_blocking_all_reduce (int myRank, int nRanks, int localRank) {
 
     ncclGroupStart();
     for(int i = 0; i < nDev; i++) {
-        ncclCommInitRankConfig(&comms[i], nDev, id, i, &config[i]);
+        CUDACHECK (cudaSetDevice (localRank * nDev + i));
+        ncclCommInitRankConfig(&comms[i], nRanks * nDev, id, myRank * nDev + i, &config[i]);
     }
     ret = ncclGroupEnd();
     if(ret == ncclInProgress) {
