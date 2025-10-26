@@ -118,4 +118,5 @@ NCCL_DEBUG=INFO  NCCL_NET_PLUGIN=none NCCL_IB_DISABLE=1 ./node_client --hostname
 
 ```shell
 mpirun --host 192.168.2.110:1,192.168.2.112:1 -x CUDA_VISIBLE_DEVICES=0,1 ./build/nccl/nonblocking_mpi 
+mpirun --host 192.168.2.110:1,192.168.2.112:1 -x CUDA_VISIBLE_DEVICES=0,1 ./build/nccl/mpi_alltoall 
 ```
