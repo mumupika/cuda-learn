@@ -1,12 +1,16 @@
-cmake_minimum_required(VERSION 3.20)
+# allow cmake from 3.26.
+cmake_minimum_required(VERSION 3.26)
 
-# project name with languages.
-project(Chapter4 LANGUAGES C CXX CUDA)
+# Chapter 5.
+project(Chapter_6 LANGUAGES C CXX CUDA)
 
 # find cuda.
 find_package(CUDAToolkit REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
+find_package(OpenCV REQUIRED)
 
-# set basic compilers.
+# set specific compilers.
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
@@ -27,20 +31,17 @@ else()
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
 endif()
 
-# find OpenCV libraries, with headers.
-find_package(OpenCV REQUIRED)
-
-# Include directories and libraries
-include_directories(../common)
+# include directories and libraries.
+include_directories(../common ./include)
 link_directories(../lib)
 
-# Source file to target.
-add_executable(simpleVecAdd simpleVecAdd.cpp)
-add_executable(cudaSimpleVecAdd simpleVecAdd.cu)
-add_executable(julia_set julia_set.cu)
+# source to target.
+add_executable(ray_tracing ray_tracing.cu)
+target_include_directories(ray_tracing PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(ray_tracing PUBLIC OpenGL ${OpenCV_LIBS})
 
-# link target to OPENGL lib.
-set_target_properties(julia_set PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-target_compile_options(julia_set PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
-target_include_directories(julia_set SYSTEM PUBLIC ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(julia_set PUBLIC OpenGL ${OpenCV_LIBS})
+add_executable(ray_tracing_const ray_tracing_const.cu)
+target_include_directories(ray_tracing_const PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(ray_tracing_const PUBLIC OpenGL ${OpenCV_LIBS})
+# target_include_directories(ray_tracing PUBLIC ./include)
+# target_link_libraries(ray_tracing PUBLIC OpenGL::GL GLUT::GLUT)

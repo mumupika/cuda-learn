@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.26)
 
 project(cuda-learn CUDA C CXX)
 
@@ -9,8 +9,5 @@ set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_INCLUDES 0)
 set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_LIBRARIES 0)
 set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_OBJECTS 0)
 
-add_subdirectory(./Chapter_3)
-add_subdirectory(./Chapter_4)
-add_subdirectory(./Chapter_5)
-add_subdirectory(./Chapter_6)
-add_subdirectory(./nccl)
+add_subdirectory(cuda-by-examples)
+add_subdirectory(nccl)

@@ -1,8 +1,8 @@
-# allow cmake from 3.20.
-cmake_minimum_required(VERSION 3.20...3.30)
+# allow cmake from 3.26.
+cmake_minimum_required(VERSION 3.26)
 
 # Chapter 5.
-project(Chapter_6 LANGUAGES C CXX CUDA)
+project(Chapter_5 LANGUAGES C CXX CUDA)
 
 # find cuda.
 find_package(CUDAToolkit REQUIRED)
@@ -36,12 +36,14 @@ include_directories(../common ./include)
 link_directories(../lib)
 
 # source to target.
-add_executable(ray_tracing ray_tracing.cu)
-target_include_directories(ray_tracing PUBLIC ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(ray_tracing PUBLIC OpenGL ${OpenCV_LIBS})
+add_executable(simpleAdd simpleAdd.cu)
+add_executable(simpleAdd2 simpleAdd2.cu)
+add_executable(ripple ripple.cu)
+add_executable(dot_product dot_product.cu)
+add_executable(share_bitmap share_bitmap.cu)
 
-add_executable(ray_tracing_const ray_tracing_const.cu)
-target_include_directories(ray_tracing_const PUBLIC ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(ray_tracing_const PUBLIC OpenGL ${OpenCV_LIBS})
-# target_include_directories(ray_tracing PUBLIC ./include)
-# target_link_libraries(ray_tracing PUBLIC OpenGL::GL GLUT::GLUT)
+target_include_directories(ripple PUBLIC ./include)
+target_link_libraries(ripple PUBLIC OpenGL::GL GLUT::GLUT)
+
+target_include_directories(share_bitmap PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(share_bitmap PUBLIC OpenGL ${OpenCV_LIBS})

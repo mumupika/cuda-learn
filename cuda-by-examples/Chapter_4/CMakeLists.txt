@@ -1,16 +1,12 @@
-# allow cmake from 3.20.
-cmake_minimum_required(VERSION 3.20...3.30)
+cmake_minimum_required(VERSION 3.26)
 
-# Chapter 5.
-project(Chapter_5 LANGUAGES C CXX CUDA)
+# project name with languages.
+project(Chapter_4 LANGUAGES C CXX CUDA)
 
 # find cuda.
 find_package(CUDAToolkit REQUIRED)
-find_package(OpenGL REQUIRED)
-find_package(GLUT REQUIRED)
-find_package(OpenCV REQUIRED)
 
-# set specific compilers.
+# set basic compilers.
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
@@ -31,19 +27,20 @@ else()
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo") # add line information to all builds for debug tools (exclusive to -G option)
 endif()
 
-# include directories and libraries.
-include_directories(../common ./include)
+# find OpenCV libraries, with headers.
+find_package(OpenCV REQUIRED)
+
+# Include directories and libraries
+include_directories(../common)
 link_directories(../lib)
 
-# source to target.
-add_executable(simpleAdd simpleAdd.cu)
-add_executable(simpleAdd2 simpleAdd2.cu)
-add_executable(ripple ripple.cu)
-add_executable(dot_product dot_product.cu)
-add_executable(share_bitmap share_bitmap.cu)
+# Source file to target.
+add_executable(simpleVecAdd simpleVecAdd.cpp)
+add_executable(cudaSimpleVecAdd simpleVecAdd.cu)
+add_executable(julia_set julia_set.cu)
 
-target_include_directories(ripple PUBLIC ./include)
-target_link_libraries(ripple PUBLIC OpenGL::GL GLUT::GLUT)
-
-target_include_directories(share_bitmap PUBLIC ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(share_bitmap PUBLIC OpenGL ${OpenCV_LIBS})
+# link target to OPENGL lib.
+set_target_properties(julia_set PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_compile_options(julia_set PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
+target_include_directories(julia_set SYSTEM PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(julia_set PUBLIC OpenGL ${OpenCV_LIBS})

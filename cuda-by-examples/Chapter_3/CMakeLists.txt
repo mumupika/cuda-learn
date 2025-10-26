@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.26)
 
-project(simplePrintf LANGUAGES C CXX CUDA)
+project(Chapter_3 LANGUAGES C CXX CUDA)
 
 find_package(CUDAToolkit REQUIRED)
 
