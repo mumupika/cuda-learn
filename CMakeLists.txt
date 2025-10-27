@@ -11,4 +11,5 @@ set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_OBJECTS 0)
 
 add_subdirectory(cuda-by-examples)
 add_subdirectory(nccl)
+add_subdirectory(mpi-example)
 # add_subdirectory(nvshmem)
