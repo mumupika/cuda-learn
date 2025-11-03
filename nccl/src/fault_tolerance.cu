@@ -22,7 +22,7 @@ bool check_timeout (const std::chrono::time_point<std::chrono::steady_clock>& st
 }
 
 ncclResult_t restartNCCL (ncclComm_t* comm, ncclUniqueId* id, int myRank, int nRanks) {
-    printf("START RECOVER.\n");
+    printf ("START RECOVER.\n");
     if (myRank == 0) {
         ncclGetUniqueId (id);
     }
@@ -51,7 +51,8 @@ void recover_data (float* dev_s, float* dev_r, float* host, int size) {
 }
 
 void reportErrorGlobally (bool abortFlag, bool* globalFlag, int myRank) {
-    MPI_Allreduce((const void *)&abortFlag, (void *)(globalFlag), sizeof(bool), MPI_BYTE, MPI_LAND, MPI_COMM_WORLD);
+    MPI_Allreduce ((const void*)&abortFlag, (void*)(globalFlag), sizeof (bool),
+                   MPI_BYTE, MPI_LAND, MPI_COMM_WORLD);
 }
 
 void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
@@ -111,26 +112,33 @@ void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
 
     // =================== Start all reduce ===================
 
-    if(myRank == 1) {
-        printf("================== Before all-reduce [rank 1] ==================\n");
-        for(int i = 0; i < 10; i++) {
-            printf("%f ", hostbuff[i]);
+    if (myRank == 1) {
+        printf (
+        "================== Before all-reduce [rank 1] ==================\n");
+        for (int i = 0; i < 10; i++) {
+            printf ("%f ", hostbuff[i]);
         }
-        printf("\n");
+        printf ("\n");
     }
 
     globalFlag = true;
     abortFlag = true;
     start = std::chrono::steady_clock::now ();
+
+    if (myRank == 0) {
+        printf ("Use \"sudo ip link down enp1s0f0np0\" to simulate the "
+                "situation of link failure. Type enter after complete...");
+        while (getchar () != '\n') {
+            continue;
+        }
+    }
+    MPI_Barrier (MPI_COMM_WORLD);
+
     ncclAllReduce ((const void*)sendbuff, (void*)recvbuff, size, ncclFloat,
                    ncclSum, comm, s);
     do {
         NCCLCHECK (ncclCommGetAsyncError (comm, &async_state));
     } while (async_state != ncclSuccess && check_timeout (start, timeout) != true);
-
-    if(myRank == 0) {
-        async_state = ncclInternalError;           // Simulate for the errors. Rank 0 suddenly failed.
-    }
 
     // Broadcast to the whole processes. We need a barrier since here has a divergent.
     if (check_timeout (start, timeout) == true || async_state != ncclSuccess) {
@@ -166,14 +174,15 @@ void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
     CUDACHECK (cudaFree (sendbuff));
     CUDACHECK (cudaFree (recvbuff));
 
-    if(myRank == 1) {
-        printf("================== After all-reduce [rank 1] ==================\n");
-        for(int i = 0; i < 10; i++) {
-            printf("%f ", hostbuff[i]);
+    if (myRank == 1) {
+        printf (
+        "================== After all-reduce [rank 1] ==================\n");
+        for (int i = 0; i < 10; i++) {
+            printf ("%f ", hostbuff[i]);
         }
-        printf("\n");
+        printf ("\n");
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier (MPI_COMM_WORLD);
 
 
     // finalizing NCCL
@@ -183,7 +192,7 @@ void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
     MPICHECK (MPI_Finalize ());
 
     // free host mem.
-    free(hostbuff);
+    free (hostbuff);
 
     printf ("[MPI Rank %d] Success \n", myRank);
     return;
