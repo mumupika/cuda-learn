@@ -8,6 +8,7 @@
 #include "mpi.h"
 #include "mpi_comm.h"
 #include <chrono>
+#include <iostream>
 #include <nccl.h>
 
 bool check_timeout (const std::chrono::time_point<std::chrono::steady_clock>& start,
@@ -21,14 +22,11 @@ bool check_timeout (const std::chrono::time_point<std::chrono::steady_clock>& st
 }
 
 ncclResult_t restartNCCL (ncclComm_t* comm, ncclUniqueId* id, int myRank, int nRanks) {
-    // finalizing NCCL
-    ncclCommDestroy (*comm);
-
-    // Restart again.
+    printf("START RECOVER.\n");
     if (myRank == 0) {
         ncclGetUniqueId (id);
     }
-    MPICHECK (MPI_Bcast ((void*)&id, sizeof (ncclUniqueId), MPI_BYTE, 0, MPI_COMM_WORLD));
+    MPICHECK (MPI_Bcast ((void*)id, sizeof (ncclUniqueId), MPI_BYTE, 0, MPI_COMM_WORLD));
 
     // Trying to restart init again. If failed, report failed and exit.
     ncclConfig_t config = NCCL_CONFIG_INITIALIZER;
@@ -36,12 +34,10 @@ ncclResult_t restartNCCL (ncclComm_t* comm, ncclUniqueId* id, int myRank, int nR
     const auto start = std::chrono::steady_clock::now ();
     int timeout = 30;
     config.blocking = 0;
-    NCCLCHECK (ncclGroupStart ());
-    NCCLCHECK (ncclCommInitRankConfig (comm, nRanks, *id, myRank, &config));
+    ncclCommInitRankConfig (comm, nRanks, *id, myRank, &config);
     do {
         NCCLCHECK (ncclCommGetAsyncError (*comm, &async_state));
     } while (async_state == ncclInProgress && check_timeout (start, timeout) != true);
-    NCCLCHECK (ncclGroupEnd ());
     if (check_timeout (start, timeout) == true || async_state != ncclSuccess) {
         ncclCommAbort (*comm);
         return async_state;
@@ -54,10 +50,8 @@ void recover_data (float* dev_s, float* dev_r, float* host, int size) {
     CUDACHECK (cudaMemcpy (dev_s, host, sizeof (float) * size, cudaMemcpyHostToDevice));
 }
 
-void reportErrorGlobally (bool abortFlag, bool *globalFlag, int myRank) {
-    abortFlag = true;
-    *globalFlag = abortFlag;
-    MPI_Bcast ((void*)globalFlag, sizeof (globalFlag), MPI_BYTE, myRank, MPI_COMM_WORLD);
+void reportErrorGlobally (bool abortFlag, bool* globalFlag, int myRank) {
+    MPI_Allreduce((const void *)&abortFlag, (void *)(globalFlag), sizeof(bool), MPI_BYTE, MPI_LAND, MPI_COMM_WORLD);
 }
 
 void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
@@ -90,27 +84,26 @@ void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
 
     // Using clock and flag to record status of Initialization with fault tolerance.
     bool globalFlag = true;
-    bool abortFlag = false;
+    bool abortFlag = true;
     ncclConfig_t config = NCCL_CONFIG_INITIALIZER;
     ncclResult_t async_state = ncclInProgress;
     int timeout = 30;
     config.blocking = 0;
 
-    // FIXME: One device per process can not use GroupStart/GroupEnd?
-    NCCLCHECK (ncclGroupStart ());
     auto start = std::chrono::steady_clock::now ();
-    NCCLCHECK (ncclCommInitRankConfig (&comm, nRanks, id, myRank, &config));
+    ncclCommInitRankConfig (&comm, nRanks, id, myRank, &config);
     do {
         NCCLCHECK (ncclCommGetAsyncError (comm, &async_state));
-    } while (async_state == ncclInProgress && check_timeout (start, timeout) != true);
-    NCCLCHECK (ncclGroupEnd ());
+    } while (async_state == ncclInProgress);
 
-    // Broadcast to the whole processes. We need a barrier since here has a divergent.
     if (check_timeout (start, timeout) == true || async_state != ncclSuccess) {
-        reportErrorGlobally (abortFlag, &globalFlag, myRank);
+        abortFlag = false;
     }
+
     MPI_Barrier (MPI_COMM_WORLD);
-    if (globalFlag == true) {
+    reportErrorGlobally (abortFlag, &globalFlag, myRank);
+
+    if (globalFlag == false) {
         ncclCommAbort (comm);
         // Free all resources and Renew again!
         NCCLCHECK (restartNCCL (&comm, &id, myRank, nRanks));
@@ -118,22 +111,36 @@ void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
 
     // =================== Start all reduce ===================
 
+    if(myRank == 1) {
+        printf("================== Before all-reduce [rank 1] ==================\n");
+        for(int i = 0; i < 10; i++) {
+            printf("%f ", hostbuff[i]);
+        }
+        printf("\n");
+    }
+
     globalFlag = true;
-    abortFlag = false;
-    NCCLCHECK (ncclGroupStart ());
+    abortFlag = true;
     start = std::chrono::steady_clock::now ();
-    NCCLCHECK (ncclAllReduce ((const void*)sendbuff, (void*)recvbuff, size,
-                              ncclFloat, ncclSum, comm, s));
-    NCCLCHECK (ncclGroupStart ());
+    ncclAllReduce ((const void*)sendbuff, (void*)recvbuff, size, ncclFloat,
+                   ncclSum, comm, s);
     do {
         NCCLCHECK (ncclCommGetAsyncError (comm, &async_state));
     } while (async_state != ncclSuccess && check_timeout (start, timeout) != true);
+
+    if(myRank == 0) {
+        async_state = ncclInternalError;           // Simulate for the errors. Rank 0 suddenly failed.
+    }
+
     // Broadcast to the whole processes. We need a barrier since here has a divergent.
     if (check_timeout (start, timeout) == true || async_state != ncclSuccess) {
-        reportErrorGlobally (abortFlag, &globalFlag, myRank);
+        abortFlag = false;
     }
+
     MPI_Barrier (MPI_COMM_WORLD);
-    if (globalFlag == true) {
+    reportErrorGlobally (abortFlag, &globalFlag, myRank);
+
+    if (globalFlag == false) {
         ncclCommAbort (comm);
         // Free all resources and Renew again!
         NCCLCHECK (restartNCCL (&comm, &id, myRank, nRanks));
@@ -142,11 +149,9 @@ void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
         recover_data (sendbuff, recvbuff, hostbuff, size);
         globalFlag = true;
         abortFlag = false;
-        NCCLCHECK (ncclGroupStart ());
         start = std::chrono::steady_clock::now ();
-        NCCLCHECK (ncclAllReduce ((const void*)sendbuff, (void*)recvbuff, size,
-                                  ncclFloat, ncclSum, comm, s));
-        NCCLCHECK (ncclGroupStart ());
+        ncclAllReduce ((const void*)sendbuff, (void*)recvbuff, size, ncclFloat,
+                       ncclSum, comm, s);
         do {
             NCCLCHECK (ncclCommGetAsyncError (comm, &async_state));
         } while (async_state != ncclSuccess && check_timeout (start, timeout) != true);
@@ -157,15 +162,28 @@ void fault_tolearance_all_reduce (int myRank, int nRanks, int localRank) {
     CUDACHECK (cudaStreamSynchronize (s));
 
     // free device buffers
-    CUDACHECK(cudaMemcpy(hostbuff, recvbuff, sizeof(float) * size, cudaMemcpyDeviceToHost));
+    CUDACHECK (cudaMemcpy (hostbuff, recvbuff, sizeof (float) * size, cudaMemcpyDeviceToHost));
     CUDACHECK (cudaFree (sendbuff));
     CUDACHECK (cudaFree (recvbuff));
+
+    if(myRank == 1) {
+        printf("================== After all-reduce [rank 1] ==================\n");
+        for(int i = 0; i < 10; i++) {
+            printf("%f ", hostbuff[i]);
+        }
+        printf("\n");
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
 
     // finalizing NCCL
     ncclCommDestroy (comm);
 
     // finalizing MPI
     MPICHECK (MPI_Finalize ());
+
+    // free host mem.
+    free(hostbuff);
 
     printf ("[MPI Rank %d] Success \n", myRank);
     return;
@@ -180,6 +198,8 @@ int main (int argc, char* argv[]) {
     MPICHECK (MPI_Comm_rank (MPI_COMM_WORLD, &myRank)); // MyRank -> stands the process rank in mpi.
     MPICHECK (MPI_Comm_size (MPI_COMM_WORLD, &nRanks)); // How many processes used in openmpi.
 
+    printf ("myRank: %d, nRanks: %d", myRank, nRanks);
+
     // calculating localRank based on hostname which is used in selecting a GPU
     uint64_t* hostHashs = (uint64_t*)malloc (sizeof (uint64_t) * nRanks);
     char hostname[1024];
@@ -193,6 +213,7 @@ int main (int argc, char* argv[]) {
         if (hostHashs[p] == hostHashs[myRank])
             localRank++;
     }
+    fault_tolearance_all_reduce (myRank, nRanks, localRank);
 
     return 0;
 }

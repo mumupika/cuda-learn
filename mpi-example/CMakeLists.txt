@@ -17,6 +17,7 @@ else ()
     message(WARNING "NOT FOUND...")
 endif ()
 
+include_directories("./include")
 
 file(GLOB SOURCES "src/*.cc" "src/*.cpp" "src/*.c" "src/*.cxx")
 foreach (source ${SOURCES})
