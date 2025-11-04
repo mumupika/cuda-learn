@@ -64,7 +64,7 @@ void anim_gpu (DataBlock* d, int ticks) {
     dim3 threads (16, 16);
     CPUAnimBitmap* bitmap = d->bitmap;
 
-    for (int i = 0; i < 90; i++) {
+    for (int i = 0; i < 1000; i++) {
         copy_const_kernel<<<blocks, threads>>> (d->dev_inSrc, d->dev_constSrc);
         blend_kernel<<<blocks, threads>>> (d->dev_outSrc, d->dev_inSrc);
         swap (d->dev_inSrc, d->dev_outSrc);
