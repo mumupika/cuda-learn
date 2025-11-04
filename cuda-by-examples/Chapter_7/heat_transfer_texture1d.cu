@@ -8,6 +8,9 @@ constexpr float MAX_TEMP = 1.0f;
 constexpr float MIN_TEMP = 0.0001f;
 constexpr float SPEED = 0.25f;
 
+cudaTextureObject_t texIn, texConst;
+cudaArray_t cuInArray, cuConstArray;
+
 // globals needed by update routine.
 struct DataBlock {
     unsigned char* output_bitmap;
@@ -19,17 +22,19 @@ struct DataBlock {
     float totalTime;
     float frames;
 };
-__global__ void copy_const_kernel (float* iptr, const float* cptr) {
+// cptr can be texturized.
+__global__ void copy_const_kernel (float* iptr, cudaTextureObject_t cptr) {
     // map by threadIdx / blockIdx to pixel.
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int offset = x + y * blockDim.x * gridDim.x;
 
-    if (cptr[offset] != 0) {
-        iptr[offset] = cptr[offset];
+    if (tex1D<float> (cptr, offset) != 0) {
+        iptr[offset] = tex1D<float> (cptr, offset);
     }
 }
-__global__ void blend_kernel (float* outSrc, const float* inSrc) {
+// inSrc can be texturized.
+__global__ void blend_kernel (float* outSrc, cudaTextureObject_t inSrc) {
     // map by threadIdx / blockIdx to pixel.
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -53,10 +58,10 @@ __global__ void blend_kernel (float* outSrc, const float* inSrc) {
         bottom -= DIM;
     }
 
-    outSrc[offset] = inSrc[offset] +
+    outSrc[offset] = tex1D<float> (inSrc, offset) +
     SPEED *
-    (inSrc[top] + inSrc[bottom] + inSrc[bottom] + inSrc[left] + inSrc[right] -
-     inSrc[offset] * 4);
+    (tex1D<float> (inSrc, top) + tex1D<float> (inSrc, bottom) + tex1D<float> (inSrc, left) +
+     tex1D<float> (inSrc, right) - 4 * tex1D<float> (inSrc, offset));
 }
 void anim_gpu (DataBlock* d, int ticks) {
     HANDLE_ERROR (cudaEventRecord (d->start, 0));
@@ -65,15 +70,18 @@ void anim_gpu (DataBlock* d, int ticks) {
     CPUAnimBitmap* bitmap = d->bitmap;
 
     for (int i = 0; i < 90; i++) {
-        copy_const_kernel<<<blocks, threads>>> (d->dev_inSrc, d->dev_constSrc);
-        blend_kernel<<<blocks, threads>>> (d->dev_outSrc, d->dev_inSrc);
+        cudaMemcpy2DToArray (cuInArray, 0, 0, d->dev_inSrc, bitmap->image_size (),
+                             bitmap->image_size (), 1, cudaMemcpyDeviceToDevice);
+        copy_const_kernel<<<blocks, threads>>> (d->dev_inSrc, texConst);
+        cudaMemcpy2DToArray (cuInArray, 0, 0, d->dev_inSrc, bitmap->image_size (),
+                             bitmap->image_size (), 1, cudaMemcpyDeviceToDevice);
+        blend_kernel<<<blocks, threads>>> (d->dev_outSrc, texIn);
         swap (d->dev_inSrc, d->dev_outSrc);
     }
     float_to_color<<<blocks, threads>>> (d->output_bitmap, d->dev_inSrc);
     HANDLE_ERROR (cudaMemcpy (bitmap->get_ptr (), d->output_bitmap,
                               bitmap->image_size (), cudaMemcpyDeviceToHost));
     HANDLE_ERROR (cudaEventRecord (d->stop, 0));
-    
     cudaDeviceSynchronize();
     float elapsedTime;
     HANDLE_ERROR (cudaEventElapsedTime (&elapsedTime, d->start, d->stop));
@@ -123,8 +131,16 @@ int main () {
             temp[x + y * DIM] = MIN_TEMP;
         }
     }
-
-    HANDLE_ERROR (cudaMemcpy (data.dev_constSrc, temp, bitmap.image_size (), cudaMemcpyHostToDevice));
+    cudaChannelFormatDesc channelDesc =
+    cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindFloat);
+    cudaMallocArray (&cuConstArray, &channelDesc, DIM * DIM);
+    cudaMemcpy2DToArray (cuConstArray, 0, 0, temp, bitmap.image_size (),
+                         bitmap.image_size (), 0, cudaMemcpyHostToDevice);
+    struct cudaResourceDesc resConstDesc;
+    memset (&resConstDesc, 0, sizeof (resConstDesc));
+    resConstDesc.res.array.array = cuConstArray;
+    resConstDesc.resType = cudaResourceTypeArray;
+    cudaCreateTextureObject (&texConst, &resConstDesc, NULL, NULL);
 
     // initialize the input data
     for (int y = 800; y < DIM; y++) {
@@ -133,9 +149,20 @@ int main () {
         }
     }
 
-    HANDLE_ERROR (cudaMemcpy (data.dev_inSrc, temp, bitmap.image_size (), cudaMemcpyHostToDevice));
+    // HANDLE_ERROR (cudaMemcpy (data.dev_inSrc, temp, bitmap.image_size (), cudaMemcpyHostToDevice));
+    cudaChannelFormatDesc channelDesc2 =
+    cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindFloat);
+    cudaMallocArray (&cuInArray, &channelDesc2, DIM * DIM);
+    cudaMemcpy2DToArray (cuInArray, 0, 0, temp, bitmap.image_size (),
+                         bitmap.image_size (), 0, cudaMemcpyHostToDevice);
+    struct cudaResourceDesc resInDesc;
+    memset (&resInDesc, 0, sizeof (resInDesc));
+    resInDesc.res.array.array = cuInArray;
+    resInDesc.resType = cudaResourceTypeArray;
+    cudaCreateTextureObject (&texIn, &resInDesc, NULL, NULL);
+
     free (temp);
-    anim_gpu(&data, 1);
-    anim_exit(&data);
+    anim_gpu (&data, 1);
+    anim_exit (&data);
     return 0;
 }

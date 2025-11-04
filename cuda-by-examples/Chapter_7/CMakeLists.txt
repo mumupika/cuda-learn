@@ -37,9 +37,15 @@ link_directories(../lib)
 
 # source to target.
 add_executable(heat_transfer heat_transfer.cu)
+add_executable(simpleTexture simpleTexture.cu)
+add_executable(cuArray cuArray.cu)
+add_executable(heat_transfer_texture1d heat_transfer_texture1d.cu)
 
-target_include_directories(heat_transfer PUBLIC ./include ${OpenCV_INCLUDE_DIRS})
-target_link_libraries(heat_transfer PUBLIC OpenGL::GL GLUT::GLUT ${OpenCV_LIBS})
+target_include_directories(heat_transfer PUBLIC ./include)
+target_link_libraries(heat_transfer PUBLIC OpenGL::GL GLUT::GLUT)
+
+target_include_directories(heat_transfer_texture1d PUBLIC ./include)
+target_link_libraries(heat_transfer_texture1d PUBLIC OpenGL::GL GLUT::GLUT)
 
 # target_include_directories(share_bitmap PUBLIC ${OpenCV_INCLUDE_DIRS})
 # target_link_libraries(share_bitmap PUBLIC OpenGL ${OpenCV_LIBS})
