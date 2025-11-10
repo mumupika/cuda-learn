@@ -72,9 +72,10 @@ void anim_gpu (DataBlock* d, int ticks) {
     float_to_color<<<blocks, threads>>> (d->output_bitmap, d->dev_inSrc);
     HANDLE_ERROR (cudaMemcpy (bitmap->get_ptr (), d->output_bitmap,
                               bitmap->image_size (), cudaMemcpyDeviceToHost));
+    cudaDeviceSynchronize ();
     HANDLE_ERROR (cudaEventRecord (d->stop, 0));
-    
-    cudaDeviceSynchronize();
+
+    cudaDeviceSynchronize ();
     float elapsedTime;
     HANDLE_ERROR (cudaEventElapsedTime (&elapsedTime, d->start, d->stop));
     d->totalTime += elapsedTime;
@@ -124,7 +125,8 @@ int main () {
         }
     }
 
-    HANDLE_ERROR (cudaMemcpy (data.dev_constSrc, temp, bitmap.image_size (), cudaMemcpyHostToDevice));
+    HANDLE_ERROR (cudaMemcpy (data.dev_constSrc, temp, bitmap.image_size (),
+                              cudaMemcpyHostToDevice));
 
     // initialize the input data
     for (int y = 800; y < DIM; y++) {
@@ -135,7 +137,7 @@ int main () {
 
     HANDLE_ERROR (cudaMemcpy (data.dev_inSrc, temp, bitmap.image_size (), cudaMemcpyHostToDevice));
     free (temp);
-    anim_gpu(&data, 1);
-    anim_exit(&data);
+    anim_gpu (&data, 1);
+    anim_exit (&data);
     return 0;
 }

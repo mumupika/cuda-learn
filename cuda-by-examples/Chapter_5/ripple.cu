@@ -38,5 +38,7 @@ int main () {
     CPUAnimBitmap bitmap (DIM, DIM, &data);
     data.bitmap = &bitmap;
     HANDLE_ERROR (cudaMalloc ((void**)(&data.dev_bitmap), bitmap.image_size ()));
-    bitmap.anim_and_exit ((void (*) (void*, int))generate_frame, (void (*) (void*))cleanup);
+
+    generate_frame(&data, 1);
+    cleanup(&data);
 }

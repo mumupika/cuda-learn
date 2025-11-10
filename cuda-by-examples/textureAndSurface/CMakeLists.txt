@@ -6,9 +6,6 @@ project(Chapter_5 LANGUAGES C CXX CUDA)
 
 # find cuda.
 find_package(CUDAToolkit REQUIRED)
-find_package(OpenGL REQUIRED)
-find_package(GLUT REQUIRED)
-find_package(OpenCV REQUIRED)
 
 # set specific compilers.
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
@@ -36,13 +33,11 @@ include_directories(../common ./include)
 link_directories(../lib)
 
 # source to target.
-add_executable(heat_transfer heat_transfer.cu)
-add_executable(simpleTexture simpleTexture.cu)
-add_executable(simpleSurface simpleSurface.cu)
-add_executable(cuArray cuArray.cu)
+add_executable(surface surface.cu)
+add_executable(normal normal.cu)
+add_executable(normal2 normal2.cu)
+add_executable(texture texture.cu)
 
-target_include_directories(heat_transfer PUBLIC ./include)
-target_link_libraries(heat_transfer PUBLIC OpenGL::GL GLUT::GLUT)
 
 # target_include_directories(share_bitmap PUBLIC ${OpenCV_INCLUDE_DIRS})
 # target_link_libraries(share_bitmap PUBLIC OpenGL ${OpenCV_LIBS})
