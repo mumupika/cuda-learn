@@ -16,8 +16,8 @@ __global__ void copyKernel (float *d_data, float *d_data2, int width, int height
 
 // Host code
 int main () {
-    const int height = 1024;
-    const int width = 1024;
+    const int height = 6700;
+    const int width = 6700;
 
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
@@ -38,17 +38,12 @@ int main () {
     dim3 numBlocks ((width + threadsperBlock.x - 1) / threadsperBlock.x,
                     (height + threadsperBlock.y - 1) / threadsperBlock.y);
 
-
-    copyKernel<<<numBlocks, threadsperBlock>>> (d_data, d_data2, width, height);
-
     cudaEvent_t start, stop;
     HANDLE_ERROR (cudaEventCreate (&start));
     HANDLE_ERROR (cudaEventCreate (&stop));
 
     HANDLE_ERROR (cudaEventRecord (start));
-    for (int i = 0; i < 99; i++) {
-        copyKernel<<<numBlocks, threadsperBlock>>> (d_data, d_data2, width, height);
-    }
+    copyKernel<<<numBlocks, threadsperBlock>>> (d_data, d_data2, width, height);
     HANDLE_ERROR (cudaEventRecord (stop));
     HANDLE_ERROR (cudaEventSynchronize (stop));
 

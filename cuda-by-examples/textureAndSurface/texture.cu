@@ -16,12 +16,13 @@ __global__ void copyKernel (float* d_data2, cudaTextureObject_t d_data, int widt
 
 // Host code
 int main () {
-    const int height = 1024;
-    const int width = 1024;
+    const int height = 6700;
+    const int width = 6700;
 
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
     printf("Device: %s\n", prop.name);
+    printf("2D texture memory size: (%d, %d)\n", prop.maxTexture2D[0], prop.maxTexture2D[1]);
 
     float* h_data = (float*)malloc (sizeof (float) * width * height);
     for (int i = 0; i < height * width; ++i) {
@@ -33,7 +34,7 @@ int main () {
 
 
     cudaChannelFormatDesc channelDesc =
-    cudaCreateChannelDesc (32, 32, 0, 0, cudaChannelFormatKindFloat);
+    cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindFloat);
     cudaArray_t cuArray;
     cudaMallocArray (&cuArray, &channelDesc, width, height);
     const size_t spitch = width * sizeof (float);
@@ -46,26 +47,29 @@ int main () {
     resDesc.resType = cudaResourceTypeArray;
     resDesc.res.array.array = cuArray;
 
+    // Specify texture object parameters
+    struct cudaTextureDesc texDesc;
+    memset(&texDesc, 0, sizeof(texDesc));
+    texDesc.addressMode[0] = cudaAddressModeWrap;
+    texDesc.addressMode[1] = cudaAddressModeWrap;
+    texDesc.filterMode = cudaFilterModeLinear;
+    texDesc.readMode = cudaReadModeElementType;
+    texDesc.normalizedCoords = 1;
+
     cudaTextureObject_t d_data;
-    cudaCreateTextureObject(&d_data, &resDesc, NULL, NULL);
+    cudaCreateTextureObject(&d_data, &resDesc, &texDesc, NULL);
 
     // Invoke kernel
     dim3 threadsperBlock (32, 32);
     dim3 numBlocks ((width + threadsperBlock.x - 1) / threadsperBlock.x,
                     (height + threadsperBlock.y - 1) / threadsperBlock.y);
 
-
-    copyKernel<<<numBlocks, threadsperBlock>>> (d_data2, d_data, width, height);
-
-
     cudaEvent_t start, stop;
     HANDLE_ERROR (cudaEventCreate (&start));
     HANDLE_ERROR (cudaEventCreate (&stop));
 
     HANDLE_ERROR (cudaEventRecord (start));
-    for (int i = 0; i < 99; i++) {
-        copyKernel<<<numBlocks, threadsperBlock>>> (d_data2, d_data, width, height);
-    }
+    copyKernel<<<numBlocks, threadsperBlock>>> (d_data2, d_data, width, height);
     HANDLE_ERROR (cudaEventRecord (stop));
     HANDLE_ERROR (cudaEventSynchronize (stop));
 
