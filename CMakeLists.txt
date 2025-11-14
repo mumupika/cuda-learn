@@ -12,6 +12,12 @@ set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_OBJECTS 0)
 # set the binaries output to the bin.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
+
 add_subdirectory(cuda-by-examples)
 # add_subdirectory(nccl)
 add_subdirectory(mpi-example)

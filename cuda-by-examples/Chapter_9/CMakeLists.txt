@@ -1,8 +1,8 @@
 # allow cmake from 3.26.
 cmake_minimum_required(VERSION 3.26)
 
-# Chapter 7.
-project(Chapter_7 LANGUAGES C CXX CUDA)
+# Chapter 5.
+project(Chapter_5 LANGUAGES C CXX CUDA)
 
 # find cuda.
 find_package(CUDAToolkit REQUIRED)
@@ -36,13 +36,14 @@ include_directories(../common ./include)
 link_directories(../lib)
 
 # source to target.
-add_executable(heat_transfer heat_transfer.cu)
-add_executable(simpleTexture simpleTexture.cu)
-add_executable(simpleSurface simpleSurface.cu)
-add_executable(cuArray cuArray.cu)
+add_executable(histogram_cpu histogram_cpu.cu)
+add_executable(histogram_gpu histogram_gpu.cu)
 
-target_include_directories(heat_transfer PUBLIC ./include)
-target_link_libraries(heat_transfer PUBLIC OpenGL::GL GLUT::GLUT)
+target_compile_features(histogram_gpu PUBLIC cxx_std_17 cuda_std_17)
+set_target_properties(histogram_gpu PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+# target_include_directories(histogram_cpu PUBLIC ./include)
+# target_link_libraries(histogram_cpu PUBLIC OpenGL::GL GLUT::GLUT)
 
 # target_include_directories(share_bitmap PUBLIC ${OpenCV_INCLUDE_DIRS})
 # target_link_libraries(share_bitmap PUBLIC OpenGL ${OpenCV_LIBS})
