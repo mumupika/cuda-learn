@@ -1,8 +1,8 @@
 # allow cmake from 3.26.
 cmake_minimum_required(VERSION 3.26)
 
-# Chapter 9.
-project(Chapter_9 LANGUAGES C CXX CUDA)
+# Chapter 10.
+project(Chapter_10 LANGUAGES C CXX CUDA)
 
 # find cuda.
 find_package(CUDAToolkit REQUIRED)
@@ -36,14 +36,17 @@ include_directories(../common ./include)
 link_directories(../lib)
 
 # source to target.
-add_executable(histogram_cpu histogram_cpu.cu)
-add_executable(histogram_gpu histogram_gpu.cu)
+add_executable(benchmark benchmark.cu)
 
-target_compile_features(histogram_gpu PUBLIC cxx_std_17 cuda_std_17)
-set_target_properties(histogram_gpu PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_compile_features(benchmark PUBLIC cxx_std_17 cuda_std_17)
+set_target_properties(benchmark PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # target_include_directories(histogram_cpu PUBLIC ./include)
 # target_link_libraries(histogram_cpu PUBLIC OpenGL::GL GLUT::GLUT)
 
 # target_include_directories(share_bitmap PUBLIC ${OpenCV_INCLUDE_DIRS})
 # target_link_libraries(share_bitmap PUBLIC OpenGL ${OpenCV_LIBS})
+
+# target_compile_options(hello_world PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
+# target_compile_features(hello_world PRIVATE cxx_std_17 cuda_std_17)
+# set_target_properties(hello_world PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
