@@ -3,5 +3,5 @@ if [ ! -d "build/" ]; then
 fi
 
 cd build
-cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug -DENABLE_CUDA_DEBUG=Debug
+cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Releaase -DENABLE_CUDA_DEBUG=False
 make -j $(nproc)

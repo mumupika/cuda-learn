@@ -37,9 +37,18 @@ link_directories(../lib)
 
 # source to target.
 add_executable(benchmark benchmark.cu)
+add_executable(stream stream.cu)
+add_executable(multiStream multiStream.cu)
+add_executable(multiStream2 multiStream2.cu)
 
 target_compile_features(benchmark PUBLIC cxx_std_17 cuda_std_17)
 set_target_properties(benchmark PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_compile_features(stream PUBLIC cxx_std_17 cuda_std_17)
+set_target_properties(stream PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_compile_features(multiStream PUBLIC cxx_std_17 cuda_std_17)
+set_target_properties(multiStream PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_compile_features(multiStream2 PUBLIC cxx_std_17 cuda_std_17)
+set_target_properties(multiStream2 PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # target_include_directories(histogram_cpu PUBLIC ./include)
 # target_link_libraries(histogram_cpu PUBLIC OpenGL::GL GLUT::GLUT)
